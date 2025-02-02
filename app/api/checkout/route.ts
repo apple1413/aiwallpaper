@@ -64,6 +64,7 @@ export async function POST(req: Request) {
     insertOrder(order);
     console.log("[Checkout] Created order:", order);
 
+    
     // Handle WeChat Pay
     if (currency === "cny" ) {
       console.log("[WeChat Pay] Initializing payment for order:", order_no);
