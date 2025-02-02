@@ -24,6 +24,7 @@
     "next": "14.0.4",
     "openai": "^4.24.1",
     "pg": "^8.11.3",
+    "qrcode": "^1.5.4",
     "react": "^18",
     "react-copy-to-clipboard": "^5.1.0",
     "react-dom": "^18",
@@ -38,6 +39,7 @@
   "devDependencies": {
     "@types/node": "^20",
     "@types/pg": "^8.10.9",
+    "@types/qrcode": "^1.5.5",
     "@types/react": "^18",
     "@types/react-copy-to-clipboard": "^5.0.7",
     "@types/react-dom": "^18",

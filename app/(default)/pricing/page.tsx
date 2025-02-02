@@ -6,6 +6,7 @@ import { loadStripe } from "@stripe/stripe-js";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import QRCode from 'qrcode';
 
 const tiers = [
   {
@@ -97,31 +98,40 @@ export default function () {
       console.log("checkout response: ", data.qr_code);
       // 处理微信支付响应
       if (data?.payment_type === 'wechat' && data?.qr_code) {
-        setQrCodeUrl(data.qr_code);
-        
-        // 添加轮询检查支付状态
-        const checkPaymentStatus = setInterval(async () => {
-          try {
-            const statusResponse = await fetch(`/api/orders/wechat/status?order_no=${data.order_no}`);
-            const statusData = await statusResponse.json();
-            
-            if (statusData.paid) {
-              clearInterval(checkPaymentStatus);
-              setQrCodeUrl(null);
-              router.push(`/pay-success/wechat?order_no=${data.order_no}`);
+        try {
+          // 生成二维码 URL
+          const qrDataUrl = await QRCode.toDataURL(data.qr_code);
+          setQrCodeUrl(qrDataUrl);
+          
+          // 添加轮询检查支付状态
+          const checkPaymentStatus = setInterval(async () => {
+            try {
+              const statusResponse = await fetch(`/api/orders/wechat/status?order_no=${data.order_no}`);
+              const statusData = await statusResponse.json();
+              
+              if (statusData.paid) {
+                clearInterval(checkPaymentStatus);
+                setQrCodeUrl(null);
+                router.push(`/pay-success/wechat?order_no=${data.order_no}`);
+              }
+            } catch (error) {
+              console.error('检查支付状态失败:', error);
             }
-          } catch (error) {
-            console.error('检查支付状态失败:', error);
-          }
-        }, 2000); // 每2秒检查一次
+          }, 2000); // 每2秒检查一次
 
-        // 设置超时时间
-        setTimeout(() => {
-          clearInterval(checkPaymentStatus);
-        }, 5 * 60 * 1000); // 5分钟后停止轮询
+          // 设置超时时间
+          setTimeout(() => {
+            clearInterval(checkPaymentStatus);
+          }, 5 * 60 * 1000); // 5分钟后停止轮询
 
-        setLoading(false);
-        return;
+          setLoading(false);
+          return;
+        } catch (error) {
+          console.error('生成二维码失败:', error);
+          toast.error('生成支付二维码失败');
+          setLoading(false);
+          return;
+        }
       }
 
       // 处理 Stripe 支付

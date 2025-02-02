@@ -73,7 +73,7 @@ export async function POST(req: Request) {
           total_fee: "0.01",
           mch_id: process.env.YUNGOUOS_MCH_ID,
           body: "aicover credits plan",
-          type: "2",
+          type: "1",
           auto: "0",
           notify_url: `${process.env.WEB_BASE_URI}/api/webhook/wechat`,
           attach: "credits purchase",
@@ -112,8 +112,8 @@ export async function POST(req: Request) {
           const responseData = {
             payment_type: 'wechat',
             order_no: order_no,
-            qr_code: (response.data as WeChatPayResponse).data,
-            qr_url: (response.data as WeChatPayResponse).data.qrCodeUrl,
+            qr_code: response.data.data,
+            qr_url: response.data.data,
           };
           console.log("[WeChat Pay] Success response:", responseData);
           return respData(responseData);
