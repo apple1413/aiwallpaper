@@ -9,38 +9,44 @@ import { useState } from "react";
 
 const tiers = [
   {
-    name: "Subscribe",
-    id: "subscribe",
+    priceId:"price_1QisyNBaSEFkYaULnX49RLyT",
+    name: "试用版",
+    id: "try",
     href: "#",
-    priceMonthly: "$9.9",
-    unit: "/month",
-    plan: "monthly",
-    amount: 990,
-    description: "Popular plan for daily use",
+    priceMonthly: "¥5.20",
+    unit: "一次性支付",
+    plan: "one-time",
+    amount: 520,
+    currency: "cny",
+    credits: 20,
+    description: "",
     features: [
-      "50 credits for image generation",
-      "Valid for 1 month",
-      "High quality image",
-      "Fast generation speed",
-      "Unlimited number of downloads",
+      "可生成 20 个 AI 红包封面",
+      "永久有效",
+      "高清的图片质量",
+      "较快的生成速度",
+      "不限制 AI 红包封面下载次数",
     ],
     featured: true,
   },
   {
-    name: "One-time Payment",
+    priceId:"price_1QisznBaSEFkYaULCKJS6vKI",
+    name: "畅享版",
     id: "one-time-payment",
     href: "#",
-    priceMonthly: "$12.9",
-    unit: "",
+    priceMonthly: "¥20.25",
+    unit: "一次性支付",
     plan: "one-time",
-    amount: 1290,
-    description: "Trial Plan for short-term Use",
+    amount: 2025,
+    currency: "cny",
+    credits: 80,
+    description: "",
     features: [
-      "50 credits for image generation",
-      "Valid for 1 month",
-      "Standard quality image",
-      "Normal generation speed",
-      "Limited number of downloads",
+      "可生成 80 个 AI 红包封面",
+      "永久有效",
+      "超清的图片质量",
+      "更快的生成速度",
+      "不限制 AI 红包封面下载次数",
     ],
     featured: false,
   },
@@ -53,15 +59,24 @@ function classNames(...classes: string[]) {
 export default function () {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [qrCodeUrl, setQrCodeUrl] = useState<string | null>(null);
 
-  const handleCheckout = async (plan: string, amount: number) => {
+  const handleCheckout = async (
+    priceId: string,
+    plan: string,
+    amount: number,
+    currency: string,
+    credits: number
+  ) => {
     try {
       const params = {
+        priceId: priceId,
         plan: plan,
-        credits: 50,
+        credits: credits,
         amount: amount,
+        currency: currency,
+        return_url: `${window.location.origin}/pay-success/wechat`
       };
-
       setLoading(true);
       const response = await fetch("/api/checkout", {
         method: "POST",
@@ -70,52 +85,105 @@ export default function () {
         },
         body: JSON.stringify(params),
       });
-      setLoading(false);
 
       if (response.status === 401) {
-        toast.error("need login");
+        setLoading(false);
+        toast.error("需要登录");
         router.push("/sign-in");
         return;
       }
 
       const { code, message, data } = await response.json();
-      if (!data) {
-        toast.error(message);
+      console.log("checkout response: ", data.qr_code);
+      // 处理微信支付响应
+      if (data?.payment_type === 'wechat' && data?.qr_code) {
+        setQrCodeUrl(data.qr_code);
+        
+        // 添加轮询检查支付状态
+        const checkPaymentStatus = setInterval(async () => {
+          try {
+            const statusResponse = await fetch(`/api/orders/wechat/status?order_no=${data.order_no}`);
+            const statusData = await statusResponse.json();
+            
+            if (statusData.paid) {
+              clearInterval(checkPaymentStatus);
+              setQrCodeUrl(null);
+              router.push(`/pay-success/wechat?order_no=${data.order_no}`);
+            }
+          } catch (error) {
+            console.error('检查支付状态失败:', error);
+          }
+        }, 2000); // 每2秒检查一次
+
+        // 设置超时时间
+        setTimeout(() => {
+          clearInterval(checkPaymentStatus);
+        }, 5 * 60 * 1000); // 5分钟后停止轮询
+
+        setLoading(false);
         return;
       }
-      const { public_key, session_id } = data;
 
-      const stripe = await loadStripe(public_key);
+      // 处理 Stripe 支付
+      if (!data || !data.public_key || !data.session_id) {
+        setLoading(false);
+        toast.error(message || "支付失败");
+        return;
+      }
+
+      const stripe = await loadStripe(data.public_key);
       if (!stripe) {
-        toast.error("checkout failed");
+        setLoading(false);
+        toast.error("支付初始化失败");
         return;
       }
 
       const result = await stripe.redirectToCheckout({
-        sessionId: session_id,
+        sessionId: data.session_id,
       });
-      console.log("result", result);
 
       if (result.error) {
-        // 处理错误
+        setLoading(false);
         toast.error(result.error.message);
       }
     } catch (e) {
+      setLoading(false);
       console.log("checkout failed: ", e);
-      toast.error("checkout failed");
+      toast.error("支付失败");
     }
   };
 
   return (
     <div className="relative isolate bg-white px-6 py-8 md:py-16 lg:px-8">
       <div className="mx-auto max-w-3xl text-center lg:max-w-4xl">
-        <h1 className="mt-2 text-3xl font-bold tracking-tight text-gray-900 sm:text-6xl">
-          AI Wallpaper Pricing
+        <h1 className="mt-2 text-3xl font-bold tracking-tight text-primary sm:text-6xl">
+          付费方案
         </h1>
       </div>
       <h2 className="mx-auto mt-6 max-w-2xl text-center text-lg leading-8 text-gray-600">
-        Choose a plan to buy credits, Unleash your creativity with AI Wallpaper.
+        选择一个付费方案，支付完成后可生成 AI 红包封面
       </h2>
+      
+      {qrCodeUrl ? (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-8 rounded-lg max-w-md w-full mx-4">
+            <h3 className="text-xl font-bold text-center mb-4">微信支付</h3>
+            <div className="flex justify-center mb-4">
+              <img src={qrCodeUrl} alt="微信支付二维码" className="w-64 h-64" />
+            </div>
+            <p className="text-center text-gray-600 mb-4">
+              请使用微信扫描二维码完成支付
+            </p>
+            <Button 
+              className="w-full"
+              onClick={() => setQrCodeUrl(null)}
+            >
+              关闭
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
       <div className="mx-auto mt-16 grid max-w-lg grid-cols-1 items-center gap-y-6 sm:mt-20 sm:gap-y-0 lg:max-w-4xl lg:grid-cols-2">
         {tiers.map((tier, tierIdx) => (
           <div
@@ -165,10 +233,16 @@ export default function () {
               className="mt-8 w-full"
               disabled={loading}
               onClick={() => {
-                handleCheckout(tier.plan, tier.amount);
+                handleCheckout(
+                  tier.priceId,
+                  tier.plan,
+                  tier.amount,
+                  tier.currency,
+                  tier.credits
+                );
               }}
             >
-              {loading ? "Processing..." : "Buy plan"}
+              {loading ? "处理中..." : "购买"}
             </Button>
           </div>
         ))}

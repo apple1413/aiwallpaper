@@ -25,6 +25,22 @@ export async function handleOrderSession(session_id: string) {
   }
 }
 
+export const handleWechatOrderSession = async (order_no: string) => {
+  try {
+    console.log("order order_no: ", order_no);
+    if (!order_no) {
+      console.log("invalid order_no", order_no);
+      throw new Error("invalid order_no");
+    }
+    const paied_at = new Date().toISOString();
+    await updateOrderStatus(order_no, 2, paied_at);
+    console.log("update success order status: ", order_no, paied_at);
+  } catch (e) {
+    console.log("handle order session failed: ", e);
+    throw e;
+  }
+}
+
 export async function getUserCredits(user_email: string): Promise<UserCredits> {
   let user_credits: UserCredits = {
     one_time_credits: 1,

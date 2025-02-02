@@ -94,6 +94,15 @@ export async function getUserOrders(
   return orders;
 }
 
+export async function getOrderByOrderNo(order_no: string) {
+    const db = getDb();
+    const { rows } = await db.query(
+        'SELECT * FROM orders WHERE order_no = $1',
+        [order_no]
+    );
+    return rows[0];
+}
+
 function formatOrder(row: QueryResultRow): Order {
   const order: Order = {
     order_no: row.order_no,
