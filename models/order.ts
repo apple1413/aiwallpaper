@@ -115,6 +115,7 @@ function formatOrder(row: QueryResultRow): Order {
     paied_at: row.paied_at,
     stripe_session_id: row.stripe_session_id,
     credits: row.credits,
+    currency: row.currency,
   };
 
   return order;
