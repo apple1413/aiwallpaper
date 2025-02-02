@@ -93,6 +93,7 @@ export default function () {
         router.push("/sign-in");
         return;
       }
+      
 
       const { code, message, data } = await response.json();
       console.log("checkout response: ", data.qr_code);
