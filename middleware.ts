@@ -2,7 +2,14 @@ import { NextResponse } from "next/server";
 import { authMiddleware } from "@clerk/nextjs";
 
 export default authMiddleware({
-  publicRoutes: ["/", "/pricing", "/api/get-wallpapers", "/api/get-user-info","/api/webhook/wechat"],
+  publicRoutes: [
+    "/api/webhook/wechat",
+    "/api/webhook(.*)",
+    "/",
+    "/pricing",
+    "/api/get-wallpapers",
+    "/api/get-user-info"
+  ],
 
   afterAuth(auth, req, evt) {
     if (!auth.userId && !auth.isPublicRoute) {
@@ -21,5 +28,5 @@ export default authMiddleware({
 });
 
 export const config = {
-  matcher: ["/((?!.+\\.[\\w]+$|_next).*)", "/", "/(api)(.*)"],
+  matcher: ["/((?!.+\\.[\\w]+$|_next).*)", "/", "/(api|trpc)(.*)"],
 };
