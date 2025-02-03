@@ -21,28 +21,28 @@ interface WechatPayNotification {
 function verifySign(params: any): boolean {
     console.log("[WeChat Webhook] Starting signature verification");
     const receivedSign = params.sign;
-    delete params.sign; // 验签时不包含sign字段
     
-    // 根据文档，只有标记"是"的字段参与签名
+    // 按照文档顺序定义参与签名的字段
     const signFields = [
-        'code',        // 是
-        'orderNo',     // 是
-        'outTradeNo',  // 是
-        'payNo',       // 是
-        'money',       // 是
-        'mchId'        // 是
+        'code',
+        'mchId',
+        'money',
+        'orderNo',
+        'outTradeNo',
+        'payNo'
     ];
     
-    const paramPairs = signFields
+    // 构建签名字符串，保持字段顺序
+    const stringArr: string[] = signFields
         .filter(key => params[key] !== null && params[key] !== undefined && params[key] !== '')
         .map(key => `${key}=${params[key]}`);
     
-    const paramString = paramPairs.join('&');
-    const signString = `${paramString}&key=${process.env.YUNGOUOS_KEY}`;
+    // 拼接签名字符串
+    const signString = stringArr.join('&') + `&key=${process.env.YUNGOUOS_KEY}`;
     
-    console.log("[WeChat Webhook] Param string for signing:", paramString);
     console.log("[WeChat Webhook] Sign string:", signString);
     
+    // 计算签名
     const calculatedSign = crypto
         .createHash('md5')
         .update(signString)
@@ -52,7 +52,8 @@ function verifySign(params: any): boolean {
     console.log("[WeChat Webhook] Signature comparison:", {
         received: receivedSign,
         calculated: calculatedSign,
-        params: params
+        signString: signString,
+        includedParams: stringArr
     });
     
     return calculatedSign === receivedSign;
