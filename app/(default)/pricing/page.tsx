@@ -110,20 +110,23 @@ export default function () {
               const statusResponse = await fetch(`/api/orders/wechat/status?order_no=${data.order_no}`);
               const statusData = await statusResponse.json();
               
-              if (statusData.paid) {
+              if (statusData.data?.paid) {
                 clearInterval(checkPaymentStatus);
-                setQrCodeUrl(null);
+                setQrCodeUrl(null); // 清除二维码
+                toast.success('支付成功！');
                 router.push(`/pay-success/wechat?order_no=${data.order_no}`);
               }
             } catch (error) {
               console.error('检查支付状态失败:', error);
             }
-          }, 2000); // 每2秒检查一次
+          }, 2000);
 
           // 设置超时时间
           setTimeout(() => {
             clearInterval(checkPaymentStatus);
-          }, 5 * 60 * 1000); // 5分钟后停止轮询
+            setQrCodeUrl(null); // 超时也清除二维码
+            toast.error('支付超时，请重试');
+          }, 5 * 60 * 1000);
 
           setLoading(false);
           return;
@@ -159,7 +162,7 @@ export default function () {
       }
     } catch (e) {
       setLoading(false);
-      console.log("checkout failed: ", e);
+      console.error("checkout failed: ", e);
       toast.error("支付失败");
     }
   };
