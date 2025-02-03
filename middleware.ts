@@ -8,16 +8,10 @@ export default authMiddleware({
     "/api/get-wallpapers",
     "/api/get-user-info",
     "/api/webhook/wechat",
-    "/api/webhook(.*)",
     "/api/orders/wechat/status",
   ],
 
   afterAuth(auth, req, evt) {
-    // 对于 webhook 路由，直接放行
-    if (req.url.includes('/api/webhook/')) {
-      return NextResponse.next();
-    }
-
     if (!auth.userId && !auth.isPublicRoute) {
       if (auth.isApiRoute) {
         return NextResponse.json(
@@ -33,11 +27,16 @@ export default authMiddleware({
   },
 });
 
+// 配置中间件匹配规则
 export const config = {
   matcher: [
-    "/((?!.*\\..*|_next).*)",
-    "/",
-    "/(api|trpc)(.*)",
-    "!.*/api/webhook/.*", // 排除 webhook 路由
+    /*
+     * Match all request paths except for the ones starting with:
+     * - api/webhook (API routes)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     */
+    '/((?!api/webhook|_next/static|_next/image|favicon.ico).*)',
   ],
 };
