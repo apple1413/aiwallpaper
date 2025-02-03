@@ -3,15 +3,21 @@ import { authMiddleware } from "@clerk/nextjs";
 
 export default authMiddleware({
   publicRoutes: [
-    "/api/webhook/wechat",
-    "/api/webhook(.*)",
     "/",
     "/pricing",
     "/api/get-wallpapers",
-    "/api/get-user-info"
+    "/api/get-user-info",
+    "/api/webhook/wechat",
+    "/api/webhook(.*)",
+    "/api/orders/wechat/status",
   ],
 
   afterAuth(auth, req, evt) {
+    // 对于 webhook 路由，直接放行
+    if (req.url.includes('/api/webhook/')) {
+      return NextResponse.next();
+    }
+
     if (!auth.userId && !auth.isPublicRoute) {
       if (auth.isApiRoute) {
         return NextResponse.json(
@@ -28,5 +34,10 @@ export default authMiddleware({
 });
 
 export const config = {
-  matcher: ["/((?!.+\\.[\\w]+$|_next).*)", "/", "/(api|trpc)(.*)"],
+  matcher: [
+    "/((?!.*\\..*|_next).*)",
+    "/",
+    "/(api|trpc)(.*)",
+    "!.*/api/webhook/.*", // 排除 webhook 路由
+  ],
 };
