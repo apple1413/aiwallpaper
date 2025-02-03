@@ -24,6 +24,7 @@ function verifySign(params: any): boolean {
   const paramString = paramPairs.join('&');
   const signString = `${paramString}&key=${process.env.YUNGOUOS_KEY}`;
   
+  
   console.log("[WeChat Webhook] Param string for signing:", paramString);
   
   const calculatedSign = crypto
