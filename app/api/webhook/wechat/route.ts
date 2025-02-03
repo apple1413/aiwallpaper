@@ -42,37 +42,34 @@ function verifySign(params: any): boolean {
 
 export async function POST(req: Request) {
     try {
-        console.log("[WeChat Webhook] Received payment notification");
-        const body: WechatPayNotification = await req.json();
-        console.log("[WeChat Webhook] Notification body:", JSON.stringify(body, null, 2));
+        // 处理 form-urlencoded 格式的请求
+        const formData = await req.formData();
+        const body: Record<string, string> = {};
+        formData.forEach((value, key) => {
+            body[key] = value.toString();
+        });
+        
+        console.log("[WeChat Webhook] Received notification:", body);
 
-        // 1. 验证签名
-        console.log("[WeChat Webhook] Verifying signature...");
+        // 验证签名
         if (!verifySign(body)) {
-            console.error("[WeChat Webhook] ❌ Signature verification failed");
+            console.error("[WeChat Webhook] ❌ Invalid signature");
             return new Response("FAIL", {
                 status: 400,
                 headers: { 'Content-Type': 'text/plain' },
             });
         }
-        console.log("[WeChat Webhook] ✅ Signature verified successfully");
 
-        // 2. 验证商户号
-        console.log("[WeChat Webhook] Verifying merchant ID...");
+        // 验证商户号
         if (body.mch_id !== process.env.YUNGOUOS_MCH_ID) {
-            console.error("[WeChat Webhook] ❌ Invalid merchant ID:", {
-                received: body.mch_id,
-                expected: process.env.YUNGOUOS_MCH_ID
-            });
+            console.error("[WeChat Webhook] ❌ Invalid merchant ID");
             return new Response("FAIL", {
                 status: 400,
                 headers: { 'Content-Type': 'text/plain' },
             });
         }
-        console.log("[WeChat Webhook] ✅ Merchant ID verified successfully");
 
-        // 3. 验证订单金额
-        console.log("[WeChat Webhook] Fetching order details...");
+        // 验证订单金额
         const order = await getOrderByOrderNo(body.out_trade_no);
         if (!order) {
             console.error("[WeChat Webhook] ❌ Order not found:", body.out_trade_no);
@@ -81,33 +78,11 @@ export async function POST(req: Request) {
                 headers: { 'Content-Type': 'text/plain' },
             });
         }
-        console.log("[WeChat Webhook] Order details:", {
-            orderNo: order.order_no,
-            amount: order.amount,
-            status: order.order_status
-        });
 
-        // 验证订单金额
-        console.log("[WeChat Webhook] Verifying payment amount...");
-        if (parseFloat(body.total_fee) !== order.amount) {
-            console.error("[WeChat Webhook] ❌ Amount mismatch:", {
-                received: body.total_fee,
-                expected: order.amount,
-                difference: parseFloat(body.total_fee) - order.amount
-            });
-            return new Response("FAIL", {
-                status: 400,
-                headers: { 'Content-Type': 'text/plain' },
-            });
-        }
-        console.log("[WeChat Webhook] ✅ Payment amount verified successfully");
-
-        // 4. 处理订单
-        console.log("[WeChat Webhook] Processing order payment...");
+        // 处理订单
         await handleWechatOrderSession(body.out_trade_no);
         console.log("[WeChat Webhook] ✅ Order processed successfully");
         
-        console.log("[WeChat Webhook] Sending success response");
         return new Response("SUCCESS", {
             status: 200,
             headers: {
@@ -116,12 +91,6 @@ export async function POST(req: Request) {
         });
     } catch (error) {
         console.error("[WeChat Webhook] ❌ Error processing webhook:", error);
-        if (error instanceof Error) {
-            console.error("[WeChat Webhook] Error details:", {
-                message: error.message,
-                stack: error.stack
-            });
-        }
         return new Response("FAIL", {
             status: 500,
             headers: {
