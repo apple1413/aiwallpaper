@@ -71,7 +71,7 @@ export async function POST(req: Request) {
       try {
         const requestParams = {
           out_trade_no: order_no,
-          total_fee: "0.01",
+          total_fee: credits,
           mch_id: process.env.YUNGOUOS_MCH_ID,
           body: "aicover credits plan",
           type: "1",
@@ -84,7 +84,7 @@ export async function POST(req: Request) {
 
         const signParams = {
           out_trade_no: order_no,
-          total_fee:"0.01",
+          total_fee:credits,
           mch_id: process.env.YUNGOUOS_MCH_ID,
           body: "aicover credits plan",
         };
